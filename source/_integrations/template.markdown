@@ -10,9 +10,35 @@ ha_codeowners:
   - '@PhracturedBlue'
   - '@tetienne'
 ha_domain: template
+ha_platforms:
+  - alarm_control_panel
+  - binary_sensor
+  - cover
+  - fan
+  - light
+  - lock
+  - sensor
+  - switch
+  - vacuum
+  - weather
 ---
 
-The `template` platform supports sensors which get their values from other entities.
+The `template` integration allows creating entities which derive their values from other entities. This is done by defining [templates](/docs/configuration/templating/) for each property of an entity, like the name or the state. Entities are updated automatically whenever a value that a template relies on changes.
+
+For template sensors it's also possible to derive the state from [automation triggers](#configuration-for-trigger-based-template-sensors).
+
+Available template platforms:
+
+- [Alarm_control_panel](/integrations/alarm_control_panel.template/)
+- [Binary_sensor](/integrations/binary_sensor.template/)
+- [Cover](/integrations/cover.template/)
+- [Fan](/integrations/fan.template/)
+- [Light](/integrations/light.template/)
+- [Lock](/integrations/lock.template/)
+- Sensor (this page)
+- [Switch](/integrations/switch.template/)
+- [Vacuum](/integrations/vacuum.template/)
+- [Weather](/integrations/weather.template/)
 
 ## Configuration
 
@@ -27,7 +53,7 @@ sensor:
     sensors:
       solar_angle:
         friendly_name: "Sun angle"
-        unit_of_measurement: 'degrees'
+        unit_of_measurement: "degrees"
         value_template: "{{ state_attr('sun.sun', 'elevation') }}"
 
       sunrise:
@@ -38,7 +64,7 @@ sensor:
 
 {% configuration %}
   sensors:
-    description: List of your sensors.
+    description: Map of your sensors.
     required: true
     type: map
     keys:
@@ -50,12 +76,8 @@ sensor:
         description: Defines a template for the name to be used in the frontend (this overrides friendly_name).
         required: false
         type: template
-      entity_id:
-        description: A list of entity IDs so the sensor only reacts to state changes of these entities. This can be used if the automatic analysis fails to find all relevant entities.
-        required: false
-        type: [string, list]
       unique_id:
-        description: An ID that uniquely identifies this sensor. Set this to an unique value to allow customisation trough the UI.
+        description: An ID that uniquely identifies this sensor. Set this to a unique value to allow customization through the UI.
         required: false
         type: string
       unit_of_measurement:
@@ -83,7 +105,7 @@ sensor:
           "attribute: template":
             description: The attribute and corresponding template.
             required: true
-            type: template        
+            type: template
       availability_template:
         description: Defines a template to get the `available` state of the component. If the template returns `true`, the device is `available`. If the template returns any other value, the device will be `unavailable`. If `availability_template` is not configured, the component will always be `available`.
         required: false
@@ -96,6 +118,106 @@ sensor:
         default: None
 {% endconfiguration %}
 
+## Configuration for trigger-based template sensors
+
+Trigger-based template sensors allow the user to define [an automation trigger][trigger-doc] for a group of template sensors. Whenever the trigger fires, the template sensor will re-render and it will have access to [the trigger data](/docs/automation/templating/) in the templates. This feature is a great way to create data based on webhook data, or have sensors be updated based on a time-schedule.
+
+Trigger-based template entities are defined in YAML directly under the `template:` key. You can define multiple configuration blocks as a list. Each block defines one or more triggers and the sensors that should be updated when the trigger fires.
+
+Trigger-based entities do not automatically update when states referenced in the templates change. This functionality can be added by defining a [state trigger](/docs/automation/trigger/#state-trigger) for each entity that you want to trigger updates.
+
+{% raw %}
+
+```yaml
+# Example configuration entry
+template:
+  - trigger:
+      - platform: webhook
+        webhook_id: my-super-secret-webhook-id
+    sensor:
+      - name: "Webhook Temperature"
+        state: "{{ trigger.json.temperature }}"
+      - name: "Webhook Humidity"
+        state: "{{ trigger.json.humidity }}"
+```
+
+{% endraw %}
+
+You can test this trigger entity with the following CURL command:
+
+```bash
+curl --header "Content-Type: application/json" \
+  --request POST \
+  --data '{"temperature": 5, "humidity": 34}' \
+  http://homeassistant.local:8123/api/webhook/my-super-secret-webhook-id
+```
+
+<p class='note'>Configuration under the <code>template:</code> key uses a different format compared to the platform configuration.</p>
+
+{% configuration %}
+trigger:
+  description: The trigger configuration for this entity. [See trigger documentation](/docs/automation/trigger)
+  required: true
+  type: list
+unique_id:
+  description: The unique ID for this trigger. This will be prefixed to all unique IDs of all entities in this block.
+  required: false
+  type: string
+sensor:
+  description: List of sensors to create from the trigger data.
+  required: true
+  type: map
+  keys:
+    state:
+      description: Defines a template to get the state of the sensor.
+      required: true
+      type: template
+    name:
+      description: Defines a template to get the name of the sensor.
+      required: false
+      type: template
+    unique_id:
+      description: An ID that uniquely identifies this sensor. Will be combined with the unique ID of the configuration block if available.
+      required: false
+      type: string
+    unit_of_measurement:
+      description: "Defines the units of measurement of the sensor, if any. This will also influence the graphical presentation in the history visualization as a continuous value. Sensors with missing `unit_of_measurement` are showing as discrete values."
+      required: false
+      type: string
+      default: None
+    icon:
+      description: Defines a template for the icon of the sensor.
+      required: false
+      type: template
+    picture:
+      description: Defines a template for the entity picture of the sensor.
+      required: false
+      type: template
+    attributes:
+      description: Defines templates for attributes of the sensor.
+      required: false
+      type: map
+      keys:
+        "attribute: template":
+          description: The attribute and corresponding template.
+          required: true
+          type: template
+    availability:
+      description: Defines a template to get the `available` state of the component. If the template returns `true`, the device is `available`. If the template returns any other value, the device will be `unavailable`. If not configured, the component will always be `available`.
+      required: false
+      type: template
+      default: true
+    device_class:
+      description: Sets the class of the device, changing the device state and icon that is displayed on the UI (see below). It does not set the `unit_of_measurement`.
+      required: false
+      type: device_class
+      default: None
+{% endconfiguration %}
+
+<p class='note'>It's currently only possible to define trigger-based entities via the top-level configuration. These entities are not yet included when reloading template entities.</p>
+
+[trigger-doc]: /docs/automation/trigger
+
 ## Considerations
 
 ### Startup
@@ -104,9 +226,12 @@ If you are using the state of a platform that takes extra time to load, the Temp
 
 {% raw %}`{{ is_state('switch.source', 'on') }}`{% endraw %}
 
-### Entity IDs
+### Sensor state updates
 
-The template engine will attempt to work out what entities should trigger an update of the sensor. This can fail, for example, if your template loops over the contents of a group. In this case, you can use `entity_id` to provide a list of entity IDs that will cause the sensor to update or you can run the service `homeassistant.update_entity` to update the sensor at will.
+The template engine works out what entities are used to trigger an update of the sensor and recalculates the result when one of those entities change.
+
+If you use a template that depends on the current time or some other non-deterministic result not sourced from entities, create an interval-based
+automation that calls the service `homeassistant.update_entity` for the sensor requiring updates. See the [example below](#working-without-entities).
 
 ### Unique ID
 
@@ -128,7 +253,7 @@ sensor:
     sensors:
       solar_angle:
         friendly_name: "Sun Angle"
-        unit_of_measurement: '°'
+        unit_of_measurement: "°"
         value_template: "{{ '%+.1f'|format(state_attr('sun.sun', 'elevation')) }}"
 ```
 
@@ -195,12 +320,12 @@ sensor:
     sensors:
       transmission_down_speed_kbps:
         friendly_name: "Transmission Down Speed"
-        unit_of_measurement: 'kB/s'
+        unit_of_measurement: "kB/s"
         value_template: "{{ states('sensor.transmission_down_speed')|float * 1024 }}"
 
       transmission_up_speed_kbps:
         friendly_name: "Transmission Up Speed"
-        unit_of_measurement: 'kB/s'
+        unit_of_measurement: "kB/s"
         value_template: "{{ states('sensor.transmission_up_speed')|float * 1024 }}"
 ```
 
@@ -280,7 +405,7 @@ sensor:
             Power Production
           {% endif %}
         value_template: "{{ states('sensor.power_consumption') }}"
-        unit_of_measurement: 'kW'
+        unit_of_measurement: "kW"
 ```
 
 {% endraw %}
@@ -290,6 +415,7 @@ sensor:
 This example shows how to add custom attributes.
 
 {% raw %}
+
 ```yaml
 sensor:
   - platform: template
@@ -322,43 +448,28 @@ sensor:
 
 The `template` sensors are not limited to use attributes from other entities but can also work with [Home Assistant's template extensions](/docs/configuration/templating/#home-assistant-template-extensions).
 
-This template contains no entities that will trigger an update (as `now()` is a function), so we add an `entity_id:` line with an entity that will force an update - here we're using a [date sensor](/integrations/time_date) to get a daily update:
+This template contains no entities that will trigger an update but the `now()` will cause it to update every minute:
 
 {% raw %}
 
 ```yaml
 sensor:
+  - platform: time_date
+    display_options:
+      - 'date'
   - platform: template
     sensors:
       nonsmoker:
-        value_template: "{{ (( as_timestamp(now()) - as_timestamp(strptime('06.07.2018', '%d.%m.%Y')) ) / 86400 ) | round(2) }}"
-        entity_id: sensor.date
-        friendly_name: 'Not smoking'
+        value_template: '{{ ( ( as_timestamp(now()) - as_timestamp(strptime("06.07.2018", "%d.%m.%Y")) ) / 86400 ) | round(2) }}'
+        friendly_name: "Not smoking"
         unit_of_measurement: "Days"
 ```
 
 {% endraw %}
 
-In this case it is also possible to convert the entity-less template above into one that will be updated automatically:
+### Updating templates using `random`
 
-{% raw %}
-
-````yaml
-sensor:
-  - platform: template
-    sensors:
-      nonsmoker:
-        value_template: "{{ (( as_timestamp(strptime(states('sensor.date'), '%Y-%m-%d')) - as_timestamp(strptime('06.07.2018', '%d.%m.%Y')) ) / 86400 ) | round(2) }}"
-        friendly_name: 'Not smoking'
-        unit_of_measurement: "Days"
-````
-
-{% endraw %}
-
-Useful entities to choose might be `sensor.date` which update once per day or `sensor.time`, which updates once per minute.  
-Please note that the resulting template will be evaluated by Home Assistant state engine on every state change of these sensors, which in case of `sensor.time` happens every minute and might have a negative impact on performance.
-
-An alternative to this is to create an interval-based automation that calls the service `homeassistant.update_entity` for the entities requiring updates. This modified example updates every 5 minutes:
+If you use the `random` filter, you may want the template to select a different random element every now and then. If the template does not update automatically due to entity changes it can be updated periodically by using the `homeassistant.update_entity` service with a time pattern automation. For example, this will render a new random number every five minutes:
 
 {% raw %}
 
@@ -366,20 +477,19 @@ An alternative to this is to create an interval-based automation that calls the 
 sensor:
   - platform: template
     sensors:
-      nonsmoker:
-        value_template: "{{ (( as_timestamp(now()) - as_timestamp(strptime('06.07.2018', '%d.%m.%Y')) ) / 86400 ) | round(2) }}"
-        entity_id: []
-        friendly_name: 'Not smoking'
-        unit_of_measurement: "Days"
+      random_number:
+        friendly_name: "Random number"
+        value_template: "{{ range(0,100)|random }}"
 
 automation:
-  - alias: 'nonsmoker_update'
+  - alias: "Update random number template"
     trigger:
       - platform: time_pattern
-        minutes: '/5'
+        minutes: "/5"
     action:
       - service: homeassistant.update_entity
-        entity_id: sensor.nonsmoker
+        target:
+          entity_id: sensor.random_number
 ```
 
 {% endraw %}

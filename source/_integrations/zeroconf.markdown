@@ -6,8 +6,9 @@ ha_category:
 ha_release: 0.18
 ha_quality_scale: internal
 ha_codeowners:
-  - '@Kane610'
+  - '@bdraco'
 ha_domain: zeroconf
+ha_iot_class: Local Push
 ---
 
 The `zeroconf` integration will scan the network for supported devices and services. Discovered integrations will show up in the discovered section on the integrations page in the configuration panel. It will also make Home Assistant discoverable for other services in the network. Zeroconf is also sometimes known as Bonjour, Rendezvous, and Avahi.
@@ -16,7 +17,7 @@ Integrations can opt-in to be found by adding either [a Zeroconf section](https:
 
 ## Configuration
 
-This integration is by default enabled, unless you've disabled or removed the [`default_config:`](https://www.home-assistant.io/integrations/default_config/) line from your configuration. If that is the case, and you wish to have Home Assistant scan for integrations using zeroconf and HomeKit, the following example shows you how to enable this integration manually:
+This integration is by default enabled, unless you've disabled or removed the [`default_config:`](/integrations/default_config/) line from your configuration. If that is the case, and you wish to have Home Assistant scan for integrations using zeroconf and HomeKit, the following example shows you how to enable this integration manually:
 
 ```yaml
 # Example configuration.yaml entry
@@ -29,10 +30,10 @@ zeroconf:
   type: map
   keys:
    default_interface:
-     description: By default, `zeroconf` will attempt to bind to all interfaces. For systems running using network isolation or similar, this may result in `zeroconf` being unavailable. Change this option to `true` if `zeroconf` does not function.
+     description: By default, `zeroconf` will broadcast on the default interface. For systems that require broadcasting `mdns` on all interfaces, change this option to `false` if `zeroconf` does not function.
      required: false
      type: boolean
-     default: false
+     default: true
    ipv6:
      description: By default, `zeroconf` will enable IPv6 support. If your network has trouble with IPv6 being enabled, you can set this option to `false`.
      required: false
