@@ -14,7 +14,7 @@ ha_platforms:
   - sensor
 ---
 
-The `statistics` sensor platform consumes the state from other sensors. It exports the `mean` value as state and the following values as attributes: `count`, `mean`, `median`, `stdev`, `variance`, `total`, `min_value`, `max_value`, `min_age`, `max_age`, `change`, `average_change` and `change_rate`. If the source is a binary sensor then only state changes are counted.
+The `statistics` sensor platform consumes the state from other sensors. It exports the `mean` value as state and the following values as attributes: `count`, `mean`, `median`, `standard_deviation`, `variance`, `total`, `min_value`, `max_value`, `min_age`, `max_age`, `change`, `average_change` and `change_rate`. If the source is a binary sensor then only state changes are counted.
 
 Assuming the [`recorder`](/integrations/recorder/) integration is running (either configured explicitly or as part of a meta-integration/dependency, e.g., [`default_config`](/integrations/default_config/), [`history`](/integrations/history/), etc.), historical sensor data is read from the database on startup and is available immediately after a restart of the platform. If the [`recorder`](/integrations/recorder/) integration is *not* running, it can take time for the sensor to start reporting data because some attribute calculations require more than one value.
 
@@ -32,8 +32,6 @@ sensor:
     entity_id: sensor.cpu
   - platform: statistics
     entity_id: binary_sensor.movement
-    max_age:
-      minutes: 30
 ```
 
 {% configuration %}
@@ -52,11 +50,11 @@ sampling_size:
   default: 20
   type: integer
 max_age:
-  description: Maximum age of measurements. Setting this to a time interval will cause older values to be discarded. Please note that you might have to increase the [sampling_size](/integrations/statistics#sampling_size) parameter. If you e.g., have a sensor value updated every second you will, by default, only get a max_age of 20s. Furthermore the sensor gets `unkown` if the entity is not updated within the time interval.
+  description: Maximum age of measurements. Setting this to a time interval will cause older values to be discarded. Please note that you might have to increase the [`sampling_size`](/integrations/statistics#sampling_size) parameter. If you e.g., have a sensor value updated every second you will by default only get a `max_age` of 20s. Furthermore the sensor gets `unknown` if the entity is not updated within the time interval.
   required: false
   type: time
 precision:
-  description: Defines the precision of the calculated values, through the argument of round().
+  description: Defines the precision of the calculated values, through the argument of [`round()`](/docs/configuration/templating/#numeric-functions-and-filters).
   required: false
   default: 2
   type: integer
